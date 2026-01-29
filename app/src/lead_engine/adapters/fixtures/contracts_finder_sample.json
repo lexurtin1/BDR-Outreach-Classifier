@@ -1,0 +1,16 @@
+[
+  {
+    "id": "sample-001",
+    "title": "Digital services platform upgrade",
+    "description": "Upgrade and support for public sector digital services platform.",
+    "buyer": {
+      "name": "UK Government Digital Service"
+    },
+    "supplier": {
+      "name": "Acme Digital Ltd"
+    },
+    "value": 2500000,
+    "published_date": "2026-01-10T00:00:00Z",
+    "notice_url": "https://www.contractsfinder.service.gov.uk/notice/sample-001"
+  }
+]
