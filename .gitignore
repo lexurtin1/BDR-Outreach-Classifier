@@ -1,0 +1,33 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Environments
+.env
+.venv/
+env/
+venv/
+
+# VS Code
+.vscode/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+
+# Docker
+.docker/
+.dockerignore
+
+# Database artifacts
+*.db
+
+# OS
+Thumbs.db
+.DS_Store
