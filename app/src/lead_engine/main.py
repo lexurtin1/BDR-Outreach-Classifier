@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI
 from . import __version__
 from .db import close_pool, connection_dependency, init_pool
 from .settings import settings
+from .adapters.run_adapters import run_all_adapters
 
 
 logging.basicConfig(
@@ -46,6 +47,15 @@ async def health_db(conn=Depends(connection_dependency)) -> Dict[str, Any]:
         cur.execute("SELECT 1;")
         cur.fetchone()
     return {"status": "ok"}
+
+
+@app.post("/debug/run_adapters")
+async def debug_run_adapters() -> Dict[str, Any]:
+    """
+    Temporary debugging endpoint to execute adapters and return ingestion summary.
+    """
+    summary = run_all_adapters()
+    return {"run": "completed", "summary": summary}
 
 
 if __name__ == "__main__":
