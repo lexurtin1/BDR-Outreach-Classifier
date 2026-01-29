@@ -1,0 +1,10 @@
+[
+  {
+    "series": "Business investment, chained volume measures",
+    "dataset_url": "https://api.ons.gov.uk/timeseries/abjr",
+    "observations": [
+      {"date": "2025-Q3", "value": 0.8},
+      {"date": "2025-Q4", "value": 1.2}
+    ]
+  }
+]
