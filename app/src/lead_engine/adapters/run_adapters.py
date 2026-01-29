@@ -6,8 +6,8 @@ from typing import Dict, List, Tuple
 
 import psycopg
 
-from ..db import get_connection
-from ..utils.hashing import checksum_payload
+from ..db import get_connection, signal_exists
+from ..utils.hashing import checksum_payload, signal_fingerprint
 from ..utils.logging import get_logger
 from .contracts_finder import ContractsFinderAdapter
 from .ons import ONSDataAdapter
@@ -38,15 +38,20 @@ def run_all_adapters() -> Dict[str, Dict[str, int]]:
                 logger.warning("No adapter registered", extra={"source": name})
                 continue
             adapter = adapter_cls(source_id=src["source_id"], base_url=src.get("base_url") or "")
-            inserted_raw, inserted_signals = _process_source(conn, adapter, run_id)
-            summary[name] = {"raw_events": inserted_raw, "signals": inserted_signals}
+            inserted_raw, inserted_signals, skipped = _process_source(conn, adapter, run_id)
+            summary[name] = {
+                "raw_events": inserted_raw,
+                "signals_inserted": inserted_signals,
+                "signals_skipped_duplicates": skipped,
+            }
     return summary
 
 
-def _process_source(conn: psycopg.Connection, adapter, run_id: str) -> Tuple[int, int]:
+def _process_source(conn: psycopg.Connection, adapter, run_id: str) -> Tuple[int, int, int]:
     raw_inserted = 0
     signals_inserted = 0
-    dedupe: set[Tuple[int, str | None, str | None, str | None]] = set()
+    signals_skipped = 0
+    dedupe_in_run: set[str] = set()
     raw_payloads = adapter.fetch(run_id=run_id)
     with conn.cursor() as cur:
         for payload in raw_payloads:
@@ -66,10 +71,21 @@ def _process_source(conn: psycopg.Connection, adapter, run_id: str) -> Tuple[int
             raw_inserted += 1
             signals = adapter.normalise(payload)
             for sig in signals:
-                key = (adapter.source_id, sig.get("title"), sig.get("signal_time"), sig.get("evidence_url"))
-                if key in dedupe:
+                fp = signal_fingerprint(sig | {"source_id": adapter.source_id})
+                if fp in dedupe_in_run:
+                    signals_skipped += 1
                     continue
-                dedupe.add(key)
+                if signal_exists(
+                    conn,
+                    source_id=adapter.source_id,
+                    evidence_url=sig.get("evidence_url"),
+                    title=sig.get("title"),
+                    signal_time=sig.get("signal_time"),
+                    org_name=sig.get("org_name"),
+                    signal_type=sig.get("signal_type"),
+                ):
+                    signals_skipped += 1
+                    continue
                 cur.execute(
                     """
                     INSERT INTO signals
@@ -90,9 +106,17 @@ def _process_source(conn: psycopg.Connection, adapter, run_id: str) -> Tuple[int
                     ),
                 )
                 signals_inserted += 1
+                dedupe_in_run.add(fp)
         conn.commit()
-    adapter.log(logging.INFO, "adapter completed", run_id=run_id, raw_inserted=raw_inserted, signals_inserted=signals_inserted)
-    return raw_inserted, signals_inserted
+    adapter.log(
+        logging.INFO,
+        "adapter completed",
+        run_id=run_id,
+        raw_inserted=raw_inserted,
+        signals_inserted=signals_inserted,
+        signals_skipped=signals_skipped,
+    )
+    return raw_inserted, signals_inserted, signals_skipped
 
 
 if __name__ == "__main__":
