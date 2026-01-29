@@ -18,5 +18,23 @@ services:
       retries: 5
     restart: unless-stopped
 
+  api:
+    build:
+      context: ./app
+    container_name: lead-engine-api
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://lead_engine:lead_engine@postgres:5432/lead_engine}
+      APP_NAME: ${APP_NAME:-UKI Spend & Investment Trends}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/src:/app/src
+      - ./app/requirements.txt:/app/requirements.txt:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn lead_engine.main:app --host 0.0.0.0 --port 8000 --reload
+
 volumes:
   pgdata:
