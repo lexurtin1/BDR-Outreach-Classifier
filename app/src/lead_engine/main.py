@@ -7,6 +7,7 @@ from . import __version__
 from .db import close_pool, connection_dependency, init_pool
 from .settings import settings
 from .adapters.run_adapters import run_all_adapters
+from .pipeline.ingest import run_ingest
 
 
 logging.basicConfig(
@@ -56,6 +57,14 @@ async def debug_run_adapters() -> Dict[str, Any]:
     """
     summary = run_all_adapters()
     return {"run": "completed", "summary": summary}
+
+
+@app.post("/run/ingest")
+async def run_ingest_endpoint(conn=Depends(connection_dependency)) -> Dict[str, Any]:
+    """
+    Production-style ingest trigger.
+    """
+    return run_ingest(conn)
 
 
 if __name__ == "__main__":
