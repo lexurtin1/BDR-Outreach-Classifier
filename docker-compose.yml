@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: lead-engine-postgres
+    environment:
+      POSTGRES_DB: lead_engine
+      POSTGRES_USER: lead_engine
+      POSTGRES_PASSWORD: lead_engine
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
